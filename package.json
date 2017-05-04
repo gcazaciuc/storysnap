@@ -1,31 +1,31 @@
 {
   "name": "storysnap",
   "version": "1.0.0",
-  "description": "A plugin for visual CSS regression based on React Storybook components",
+  "description": "A tool for visual CSS regression based on React Storybook components",
   "main": "dist/index.js",
   "scripts": {
     "test": "test",
     "build": "webpack",
     "dev": "webpack --watch"
   },
+  "bin": {
+    "storysnap": "./bin/storysnap"
+  },
   "author": "Cazaciuc Gabriel",
   "license": "MIT",
   "dependencies": {
-    "chrome-remote-interface": "^0.22.0"
+    "chrome-remote-interface": "^0.22.0",
+    "commander": "^2.9.0",
+    "lighthouse": "^1.6.5",
+    "pixelmatch": "^4.0.2",
+    "png-crop": "^0.0.1"
   },
   "devDependencies": {
-    "@kadira/storybook": "*",
-    "@kadira/storybook-ui": "*",
     "babel-core": "^6.24.1",
     "babel-loader": "^7.0.0",
     "babel-preset-es2015": "^6.24.1",
     "babel-preset-react": "^6.24.1",
-    "react": "^15.5.4",
-    "react-dom": "^15.5.4",
     "webpack": "^2.4.1",
     "webpack-dev-server": "2"
-  },
-  "peerDependencies": {
-    "react": "*"
   }
 }

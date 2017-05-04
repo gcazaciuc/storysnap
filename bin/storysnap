@@ -1,0 +1,35 @@
+#!/usr/bin/env node
+const program = require('commander');
+const exec = require('child_process').exec;
+const pkg = require('../package.json');
+const fs = require('fs');
+const NavAPI = require("../src/navigation-api.js");
+const StorybookScrapper = require("../src/storybook-scrapper.js");
+program
+  .version(pkg.version)
+  .command('run', 'Run Storysnap')
+  .option('-storybook-url, --storybook-url', 'Url where React Storybook can be accessed')
+  .action((req, optional) => {
+    NavAPI.launch(req).then(() => {
+        console.log('Browser started');
+        StorybookScrapper.setNavAPI(NavAPI);
+        StorybookScrapper.screenshotAllElements();
+        // NavAPI.takeElementScreenshot('#storybook-preview-iframe').then((screenshotStream) => {
+        //     console.log('Screenshot taken...');
+        //     //screenshotStream.pipe(fs.createWriteStream('output.png'));
+        // }).catch((err) => {
+        //     console.log(err);
+        // });
+    });
+  });
+
+program.parse(process.argv);
+
+function handleExit(err) {
+  console.log(err);
+  NavAPI.kill();
+}
+process.on('uncaughtException', handleExit);
+process.on('beforeExit', handleExit);
+process.on('unhandledRejection', handleExit);
+process.on('SIGINT', handleExit);

@@ -4,18 +4,13 @@ module.exports = {
   context: path.resolve(__dirname, './src'),
   entry: {
     index: './index.js',
-    register: './register.js',
   },
   output: {
     path: path.resolve(__dirname, './dist'),
     filename: '[name].js',
-    libraryTarget: 'umd'
+    libraryTarget: 'commonjs2'
   },
-  externals: {
-    'React': 'react',
-    'react': 'react',
-    '@kadira/storybook-addons': '@kadira/storybook-addons'
-  },
+  target: 'node',
   module: {
     rules: [
       {
