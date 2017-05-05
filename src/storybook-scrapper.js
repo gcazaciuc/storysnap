@@ -1,10 +1,15 @@
+// @ts-check
 module.exports = {
     _navAPI: null,
     setNavAPI: function(navAPI) {
         this._navAPI = navAPI;
     },
+    /**
+     * @param {number} id The NodeId of the menu item to click on
+     */
     _clickMenuAndWaitForPage: function _clickMenuAndWaitForPage(id) {
         const NavAPI = this._navAPI;
+        NavAPI.saveImage
         return NavAPI
                 .click(id)
                 .then(() => NavAPI.waitForMs(1000))

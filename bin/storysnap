@@ -12,8 +12,13 @@ program
   .action((req, optional) => {
     NavAPI.launch(req).then(() => {
         console.log('Browser started');
-        StorybookScrapper.setNavAPI(NavAPI);
-        StorybookScrapper.screenshotAllElements();
+        NavAPI
+          .navigate('https://www.google.ro/')
+          .then(() => NavAPI.takeScreenshot('google.png'))
+          .then(() => NavAPI.click('input[name=btnI]'))
+          .then(() => NavAPI.takeScreenshot('google-lucky.png'))
+        // StorybookScrapper.setNavAPI(NavAPI);
+        // StorybookScrapper.screenshotAllElements();
         // NavAPI.takeElementScreenshot('#storybook-preview-iframe').then((screenshotStream) => {
         //     console.log('Screenshot taken...');
         //     //screenshotStream.pipe(fs.createWriteStream('output.png'));

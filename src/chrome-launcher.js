@@ -9,7 +9,7 @@ function launchChrome(url, headless = true) {
       '--window-size=1024,732',
       '--disable-gpu',
       '--hide-scrollbars',
-      '--disable-web-security',
+      '--no-sandbox',
       headless ? '--headless' : ''
     ]
   });

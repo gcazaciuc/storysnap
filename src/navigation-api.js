@@ -1,3 +1,4 @@
+// @ts-check
 const exec = require('child_process').exec;
 const chrome = require('chrome-remote-interface');
 const launcher = require('./chrome-launcher.js');
@@ -6,12 +7,20 @@ const fs = require('fs');
 const Events = {
     MOUSE_PRESSED: 'mousePressed',
     MOUSE_RELEASED: 'mouseReleased',
-    MOUSE_MOVED: 'mouseMoved'
+    MOUSE_MOVED: 'mouseMoved',
+    KEY_UP: 'keyUp',
+    KEY_DOWN: 'keyDown'
 };
 
 module.exports = {
     _client: null,
-    _documentNodeId: null,
+    _documentNode: null,
+    /**
+     * Launches a new browser instance
+     * @param {string} url The URL to open when the browser is launched
+     * @param {boolean} headless Whether or not the browser should start in headless
+     * mode or not
+     */
     launch: function launch(url, headless=true) {
         return new Promise((resolve, reject) => {
             launcher.launchChrome(url, headless).then(() => {
@@ -21,11 +30,10 @@ module.exports = {
                         .enable()
                         .then(() => DOM.enable())
                         .then(() => Network.enable())
-                        .then(() =>  DOM.getDocument())
+                        .then(() =>  DOM.getDocument({ depth: -1 }))
                         .then((node) => {
                             this._client = client;
-                            const {root: {nodeId: documentNodeId}} = node;
-                            this._documentNodeId = documentNodeId;
+                            this._documentNode = node;
                             resolve();
                         });
                 });
@@ -38,6 +46,10 @@ module.exports = {
     kill: () => {
         return launcher.kill();
     },
+    /**
+     * Gets the bounding box of a node specified by NodeId or selector
+     * @param {string|number} selector
+     */
     getBoundingBox: function getBoundingBox(selector) {
         const { DOM } = this._client;
         if (typeof selector === 'number') {
@@ -46,16 +58,16 @@ module.exports = {
         }
         return this.querySelector(selector).then(({ nodeId: bodyNodeId }) => {
             return DOM.getBoxModel({ nodeId: bodyNodeId });
+        }).catch((err) => {
+            throw err;
         });
     },
     _retrieveNodeId: function _retrieveNodeId(nodeId) {
         const { DOM } = this._client;
         let rootDocPromise = null;
         if (typeof nodeId === 'undefined' || nodeId === null) {
-            console.log('Node id not specified');
-            rootDocPromise = new Promise((resolve) => resolve({root: {nodeId: this._documentNodeId }}));
+            rootDocPromise = DOM.getDocument();
         } else {
-            console.log('Node id IS specified');
             rootDocPromise = new Promise((resolve) => resolve({root: {nodeId}}));
         }
         return rootDocPromise;
@@ -69,11 +81,12 @@ module.exports = {
         let rootDocPromise = this._retrieveNodeId(nodeId);
         return rootDocPromise.then((doc) => {
             const {root: {nodeId: documentNodeId}} = doc;
-            console.log(doc);
             return DOM.querySelector({
                 selector: selector,
                 nodeId: documentNodeId,
             })
+        }).catch((err) => {
+            throw err;
         });
     },
     /**
@@ -94,7 +107,8 @@ module.exports = {
     /**
      * Low level API for triggering mouse events on a Node
      * identified by a selector.
-     * Acceptable event types: mousePressed, mouseReleased, mouseMoved
+     * @param {'mousePressed'|'mouseReleased'|'mouseMoved'} eventType
+     * @param {number|string} selectorOrNodeId
      */
     mouseEvent: function mouseEvent(eventType, selectorOrNodeId) {
         const { Input } = this._client;
@@ -102,30 +116,75 @@ module.exports = {
         return this.getBoundingBox(selectorOrNodeId).then(({ model: box }) => {
             const x = Math.floor(box.width/2)+box.content[0];
             const y = Math.floor(box.height/2)+box.content[1];
-            return Input.dispatchMouseEvent({ type: eventType, x, y, button: 'left' });
+            return Input.dispatchMouseEvent({
+                type: eventType, 
+                x, 
+                y, 
+                button: 'left',
+                clickCount: eventType === Events.MOUSE_PRESSED ? 1 : 0
+            });
         });
+    },
+    /**
+     * Focuses a certain node given it's selector
+     * or NodeId
+     */
+    focus: function focus(selectorOrNodeId) {
+        const { DOM } = this._client;
+        if (typeof selectorOrNodeId === 'number') {
+            return DOM.focus({nodeId: selectorOrNodeId});
+        }
+        if (typeof selectorOrNodeId === 'string') {
+            return this.querySelector(selectorOrNodeId).then((obj) => {
+                return DOM.focus({nodeId: obj.nodeId});
+            });
+        }
+        return new Promise((resolve, reject) => reject());
+    },
+     /**
+     * Low level API for triggering key events on a Node
+     * identified by a selector.
+     * @param {'keyDown'|'keyUp'|'rawKeyDown'|'char'} eventType
+     * @param {number|string} selectorOrNodeId Optional param, if specified
+     * it focuses first the specified node and then triggers the key event
+     */
+    keyEvent: function keyEvent(eventType, selectorOrNodeId) {
+        const { Input, DOM } = this._client;
+        const eventPayload = {
+            type: 'char',
+            char: 'a'
+        };
+        return Input.dispatchKeyEvent(eventPayload);
+    },
+    type: function type(selectorOrNodeId) {
+         return this.focus(selectorOrNodeId)
+                .then(() => this.keyEvent(Events.KEY_DOWN, selectorOrNodeId))
+                .then(() => this.keyEvent(Events.KEY_UP, selectorOrNodeId));
     },
     /**
      * High level API for clicking on a certain element
+     * @param {number|string} selectorOrNodeId
      */
     click: function click(selectorOrNodeId) {
-        return this.mouseEvent(Events.MOUSE_PRESSED, selectorOrNodeId).then(() => {
-            return this.mouseEvent(Events.MOUSE_RELEASED, selectorOrNodeId);
-        });
+        return this.mouseEvent(Events.MOUSE_RELEASED, selectorOrNodeId)
+               .then(() => this.mouseEvent(Events.MOUSE_RELEASED, selectorOrNodeId))
+               .then(() => this.waitForMs(100));
     },
     /**
      * Navigates to a certain url and waits for the page to load
+     * @param {string} url The URL to navigate to
      */
     navigate: function navigate(url) {
         const { Page } = this._client;
         return new Promise((resolve, reject) => {
-            Page.navigate(url).then(() => {
-                Page.loadEventFired(() => resolve());
+            Page.navigate({url}).then(() => {
+                return Page.loadEventFired(() => resolve());
             });
         });
     },
     /**
      * Waits for the current page to fully load
+     * @return {Promise<number>}
      */
     waitForPageLoad: function waitForPageLoad() {
         const { Page } = this._client;
@@ -148,14 +207,12 @@ module.exports = {
         return new Promise((resolve, reject) => {
             this.getBoundingBox(selector).then(({ model: box }) => {
                 this.takeScreenshot().then((fullPageScreenshot) => {
-                    console.log(box);
                     const config = {
                         width: box.width,
                         height: box.height,
                         left: box.margin[0],
                         top: box.margin[1]
                     };
-                    console.log(config);
                     cropper.cropToStream(fullPageScreenshot, config, (err, outputStream) => {
                         if (err) {
                             reject(err);
@@ -176,7 +233,6 @@ module.exports = {
                     console.error(err);
                     reject(err);
                 } else {
-                    console.log('Screenshot saved');
                     resolve();
                 }
             });
@@ -187,16 +243,14 @@ module.exports = {
      * by the caller to the region of interest
      */
     takeScreenshot: function takeScreenshot(outfile) {
-        return new Promise((resolve, reject) => {
-            const client = this._client;
-            const { Page } = this._client;
-            Page.captureScreenshot({ format: 'png' }).then((screenshot) => {
-                const buffer = new Buffer(screenshot.data, 'base64');
-                if (outfile) {
-                    this.saveImage(buffer, outfile);
-                }
-                resolve(buffer);
-            });
+        const client = this._client;
+        const { Page } = this._client;
+        return Page.captureScreenshot({ format: 'png' }).then((screenshot) => {
+            const buffer = new Buffer(screenshot.data, 'base64');
+            if (outfile) {
+                return this.saveImage(buffer, outfile);
+            }
+            return buffer;
         });
     }
 }
