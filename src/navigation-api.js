@@ -2,8 +2,11 @@
 const exec = require('child_process').exec;
 const chrome = require('chrome-remote-interface');
 const launcher = require('./chrome-launcher.js');
+const ImageManager = require('./image-manager.js');
 const cropper = require('png-crop');
 const fs = require('fs');
+const path = require('path');
+
 const Events = {
     MOUSE_PRESSED: 'mousePressed',
     MOUSE_RELEASED: 'mouseReleased',
@@ -15,13 +18,14 @@ const Events = {
 module.exports = {
     _client: null,
     _documentNode: null,
+    _screenshotManager: ImageManager,
     /**
      * Launches a new browser instance
      * @param {string} url The URL to open when the browser is launched
      * @param {boolean} headless Whether or not the browser should start in headless
      * mode or not
      */
-    launch: function launch(url, headless=true) {
+    launch: function launch(url=undefined, headless=true) {
         return new Promise((resolve, reject) => {
             launcher.launchChrome(url, headless).then(() => {
                 chrome((client) => {
@@ -41,6 +45,16 @@ module.exports = {
         })
     },
     /**
+     * Returns the chrome-remote-interface client object used to control the navigation session.
+     * This allows performing low level operations and should generally be avoided if possible
+     * in favor of the NavAPI functions.
+     * See the API docs of chrome-remote-interface of what it allows and also consult
+     * 
+     */
+    getClient: function getClient() {
+        return this._client;
+    },
+    /**
      * Destroys the launched instance and cleans up the resources
      */
     kill: () => {
@@ -56,9 +70,11 @@ module.exports = {
             // we are dealing with a NodeId
             return DOM.getBoxModel({ nodeId: selector });
         }
-        return this.querySelector(selector).then(({ nodeId: bodyNodeId }) => {
+        return this.querySelector(selector).then((node) => {
+            const { nodeId: bodyNodeId } = node;
             return DOM.getBoxModel({ nodeId: bodyNodeId });
         }).catch((err) => {
+            console.log(`Exception while getting bounding box for ${selector}`)
             throw err;
         });
     },
@@ -66,7 +82,7 @@ module.exports = {
         const { DOM } = this._client;
         let rootDocPromise = null;
         if (typeof nodeId === 'undefined' || nodeId === null) {
-            rootDocPromise = DOM.getDocument();
+            rootDocPromise = DOM.getDocument({ depth: -1 });
         } else {
             rootDocPromise = new Promise((resolve) => resolve({root: {nodeId}}));
         }
@@ -86,8 +102,22 @@ module.exports = {
                 nodeId: documentNodeId,
             })
         }).catch((err) => {
+            console.log(`Exception while querying DOM for ${selector}`)
             throw err;
         });
+    },
+    /**
+     * Retrieves the HTML content of a certain node(identified by a selector or node id)
+     */
+    getHTML: function getHTML(selectorOrNodeId) {
+        const { DOM } = this._client;
+        if (typeof selectorOrNodeId === 'string') {
+            return this.querySelector(selectorOrNodeId).then((node) => {
+                const { nodeId } = node;
+                return DOM.getOuterHTML({ nodeId });
+            });
+        }
+         return DOM.getOuterHTML({ nodeId: selectorOrNodeId }); 
     },
     /**
      * Queries the page returning all the node ids
@@ -148,27 +178,33 @@ module.exports = {
      * @param {number|string} selectorOrNodeId Optional param, if specified
      * it focuses first the specified node and then triggers the key event
      */
-    keyEvent: function keyEvent(eventType, selectorOrNodeId) {
+    keyEvent: function keyEvent(eventType, key, selectorOrNodeId) {
         const { Input, DOM } = this._client;
         const eventPayload = {
             type: 'char',
-            char: 'a'
+            char: key,
+            text: key
         };
         return Input.dispatchKeyEvent(eventPayload);
     },
-    type: function type(selectorOrNodeId) {
+    /**
+     * Types the specified text while focused on a certain node id 
+     * or DOM selector.
+     * @param {string} text The text to type in
+     * @param {string} selectorOrNodeId The selector to focus on
+     */
+    type: function type(text, selectorOrNodeId) {
          return this.focus(selectorOrNodeId)
-                .then(() => this.keyEvent(Events.KEY_DOWN, selectorOrNodeId))
-                .then(() => this.keyEvent(Events.KEY_UP, selectorOrNodeId));
+                .then(() => this.keyEvent(Events.KEY_DOWN, text, selectorOrNodeId))
+                .then(() => this.keyEvent(Events.KEY_UP, '', selectorOrNodeId));
     },
     /**
      * High level API for clicking on a certain element
      * @param {number|string} selectorOrNodeId
      */
     click: function click(selectorOrNodeId) {
-        return this.mouseEvent(Events.MOUSE_RELEASED, selectorOrNodeId)
-               .then(() => this.mouseEvent(Events.MOUSE_RELEASED, selectorOrNodeId))
-               .then(() => this.waitForMs(100));
+        return this.mouseEvent(Events.MOUSE_PRESSED, selectorOrNodeId)
+               .then(() => this.mouseEvent(Events.MOUSE_RELEASED, selectorOrNodeId));
     },
     /**
      * Navigates to a certain url and waits for the page to load
@@ -217,20 +253,23 @@ module.exports = {
                         if (err) {
                             reject(err);
                         } else {
-                            outputStream.pipe(fs.createWriteStream(screenshotFile)).on('close', () => {
-                                resolve(outputStream);
-                            });
+                           this._screenshotManager.onScreenshot(
+                               outputStream, screenshotFile
+                            ).then(() => resolve(outputStream));
                         }
                     });
                 });
             });
         });
     },
+    /**
+     * Saves a buffer as a png file on disk
+     */
     saveImage: function saveImage(buffer, outfile = 'output.png') {
         return new Promise((resolve, reject) => {
             fs.writeFile(outfile, buffer, 'base64', function(err) {
                 if (err) {
-                    console.error(err);
+                    console.log(err);
                     reject(err);
                 } else {
                     resolve();
@@ -242,13 +281,14 @@ module.exports = {
      * Takes a full page screenshot. This is then cropped
      * by the caller to the region of interest
      */
-    takeScreenshot: function takeScreenshot(outfile) {
+    takeScreenshot: function takeScreenshot(screenshotFile) {
         const client = this._client;
         const { Page } = this._client;
         return Page.captureScreenshot({ format: 'png' }).then((screenshot) => {
             const buffer = new Buffer(screenshot.data, 'base64');
-            if (outfile) {
-                return this.saveImage(buffer, outfile);
+            if (screenshotFile) {
+                this._sessionScreenshots.push(screenshotFile);
+                return this.saveImage(buffer, screenshotFile);
             }
             return buffer;
         });

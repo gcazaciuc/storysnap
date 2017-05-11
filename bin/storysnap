@@ -1,34 +1,23 @@
 #!/usr/bin/env node
-const program = require('commander');
+
+const yargs = require('yargs');
 const exec = require('child_process').exec;
 const pkg = require('../package.json');
 const fs = require('fs');
 const NavAPI = require("../src/navigation-api.js");
-const StorybookScrapper = require("../src/storybook-scrapper.js");
-program
-  .version(pkg.version)
-  .command('run', 'Run Storysnap')
-  .option('-storybook-url, --storybook-url', 'Url where React Storybook can be accessed')
-  .action((req, optional) => {
-    NavAPI.launch(req).then(() => {
-        console.log('Browser started');
-        NavAPI
-          .navigate('https://www.google.ro/')
-          .then(() => NavAPI.takeScreenshot('google.png'))
-          .then(() => NavAPI.click('input[name=btnI]'))
-          .then(() => NavAPI.takeScreenshot('google-lucky.png'))
-        // StorybookScrapper.setNavAPI(NavAPI);
-        // StorybookScrapper.screenshotAllElements();
-        // NavAPI.takeElementScreenshot('#storybook-preview-iframe').then((screenshotStream) => {
-        //     console.log('Screenshot taken...');
-        //     //screenshotStream.pipe(fs.createWriteStream('output.png'));
-        // }).catch((err) => {
-        //     console.log(err);
-        // });
-    });
-  });
+const ImageManager = require("../src/image-manager.js");
+const argv = yargs
+            .usage('Usage: $0 -script [path]')
+            .demandOption(['script'])
+            .argv;
 
-program.parse(process.argv);
+if (argv.screenshotDir) {
+    ImageManager.setScreenshotDir(argv.screenshotDir);
+}
+if (argv.script) {
+    const navScript = require(argv.script);
+    navScript({ NavAPI, ImageManager }, argv);
+}
 
 function handleExit(err) {
   console.log(err);

@@ -10,7 +10,16 @@
             "request": "launch",
             "name": "Debug",
             "stopOnEntry": true,
-            "program": "${workspaceRoot}/examples/programatic-usage.js"
+            "cwd": "/home/gabrielcazaciuc/storysnap",
+            "args": [
+                "--script",
+                "/home/gabrielcazaciuc/storysnap/examples/storybook-scrapper.js",
+                "--storybookUrl",
+                "http://localhost:9009",
+                "--screnshotDir",
+                "../screenshots/"
+            ],
+            "program": "${workspaceRoot}/bin/storysnap"
         }
     ]
 }

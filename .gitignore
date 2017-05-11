@@ -1,3 +1,6 @@
 dist/
 node_modules/
+expected/
+actual/
+diff/
 *.png

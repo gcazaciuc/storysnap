@@ -15,10 +15,13 @@
   "license": "MIT",
   "dependencies": {
     "chrome-remote-interface": "^0.22.0",
-    "commander": "^2.9.0",
     "lighthouse": "^1.6.5",
     "pixelmatch": "^4.0.2",
-    "png-crop": "^0.0.1"
+    "png-crop": "^0.0.1",
+    "pngjs": "^3.2.0",
+    "rimraf": "^2.6.1",
+    "utf-8-validate": "^3.0.1",
+    "yargs": "^8.0.1"
   },
   "devDependencies": {
     "babel-core": "^6.24.1",
