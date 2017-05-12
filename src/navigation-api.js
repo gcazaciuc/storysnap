@@ -117,7 +117,28 @@ module.exports = {
                 return DOM.getOuterHTML({ nodeId });
             });
         }
-         return DOM.getOuterHTML({ nodeId: selectorOrNodeId }); 
+        return DOM.getOuterHTML({ nodeId: selectorOrNodeId }); 
+    },
+    /**
+     * Gets the attributes of a node specified by either a selector
+     * or a node id.
+     */
+    getAttributes: function getAttributes(selectorOrNodeId) {
+        const { DOM } = this._client;
+        const attrToObj  = function attrToObj({ attributes }) {
+            const obj = {};
+            for(let i = 0; i < attributes.length; i += 2) {
+                obj[attributes[i]] = attributes[i+1];
+            }
+            return obj;
+        }
+        if (typeof selectorOrNodeId === 'string') {
+            return this.querySelector(selectorOrNodeId).then((node) => {
+                const { nodeId } = node;
+                return DOM.getAttributes({ nodeId }).then(attrToObj);
+            });
+        }
+        return DOM.getAttributes({ nodeId: selectorOrNodeId }).then(attrToObj); 
     },
     /**
      * Queries the page returning all the node ids

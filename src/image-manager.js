@@ -6,6 +6,7 @@ const pixelmatch = require('pixelmatch');
 
 module.exports = {
     _sessionScreenshots: [],
+    _comparisonResults: {},
     _screenshotDir: __dirname,
     /**
      * Gets the base directory where screenshots are saved
@@ -27,6 +28,9 @@ module.exports = {
     },
     getDiffPath: function getExpectedPath() {
         return path.join(this.getScreenshotDir(), 'diff');
+    },
+    getComparisonResults: function getScreenshotComparisonResults() {
+        return this._comparisonResults;
     },
     createScreenshotsDirs: function() {
         const screenshotDir = this._screenshotDir;
@@ -72,12 +76,12 @@ module.exports = {
         return new Promise((resolve, reject) => {
             const actualPath = this.getActualPath(screenshotBaseName);
             const expectedPath = this.getExpectedPath(screenshotBaseName);
-            if (!fs.existsSync(actualPath)) {
-                this._writeToDisk(outputStream, actualPath, () => {
-                    this._copyFile(actualPath, expectedPath, () => resolve(outputStream));
+            if (!fs.existsSync(expectedPath)) {
+                this._writeToDisk(outputStream, expectedPath, () => {
+                    this._copyFile(expectedPath, actualPath, () => resolve(outputStream));
                 });
             } else {
-                this._writeToDisk(outputStream, expectedPath, resolve);
+                this._writeToDisk(outputStream, actualPath, resolve);
             } 
         });
     },
@@ -87,11 +91,14 @@ module.exports = {
             return;
         }
         const firstScreenshot = screenshots.pop();
+        const diffScreenshotName = path.basename(firstScreenshot, '.png');
         return this.compare(
             path.join(this.getActualPath(), firstScreenshot),
             path.join(this.getExpectedPath(), firstScreenshot),
-            path.join(this.getDiffPath(), `${firstScreenshot}-diff.png`)
+            path.join(this.getDiffPath(), `${diffScreenshotName}-diff.png`)
         ).then((result) => {
+            // The number of pixels changed must be 0
+            this._comparisonResults[firstScreenshot] = (result === 0);
             return this.compareAll(screenshots);
         });
     },

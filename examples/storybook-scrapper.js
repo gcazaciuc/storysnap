@@ -3,11 +3,6 @@
  * A module that opens up React Storybook and does
  * screenshots of each component it can find
  */
-const tap = (msg, fn) => (...args) => {
-    console.log(msg, args);
-    return fn.apply(null, args);
-}
-
 const path = require('path');
 
 module.exports = ({ NavAPI, ImageManager }, options) => NavAPI.launch(options.storybookUrl).then(() => {
@@ -15,32 +10,32 @@ module.exports = ({ NavAPI, ImageManager }, options) => NavAPI.launch(options.st
     
     ImageManager.createScreenshotsDirs();
 
-    const  _takeStoryScreenshot = function _takeStoryScreenshot(id) {
-        if (!id) {
+    const  _takeStoryScreenshot = function _takeStoryScreenshot(story) {
+        if (!story) {
             return new Promise((resolve, reject) => resolve(null));
         }
-        const takeWholeScreenshot  = tap(`Whole screenshot ${id}`, () => NavAPI.takeScreenshot(`whole-${id}.png`));
-        const takeElementScreenshot = tap(`Element screenshot ${id}`,() => {
+        const { id } = story;
+        const title = story.title.split(' ').join('-').toLowerCase();
+        const takeElementScreenshot = () => {
             return NavAPI.takeElementScreenshot(
                 '#storybook-preview-iframe', 
-                `output-${id}.png`
+                `${title}.png`
             );
-        });
+        };
         return NavAPI
                 .click(id)
                 .then(takeElementScreenshot)
-                .then(() => id);
+                .then(() => story);
     };
     const _findUnexploredStories = function _findUnexploredStories(ids, resolve) {
         if (!ids.length) {
             return resolve(null);
         }
         const idToCheck = ids.pop();
-        return NavAPI.getHTML(idToCheck).then(({ outerHTML: html }) => {
-            if (stories.indexOf(html) === -1) {
-                console.log(JSON.stringify(stories));
-                stories.push(html);
-                resolve(idToCheck);
+        return NavAPI.getAttributes(idToCheck).then(({ title }) => {
+            if (stories.indexOf(title) === -1) {
+                stories.push(title);
+                resolve({ id: idToCheck, title });
             } else {
                 return _findUnexploredStories(ids, resolve);
             }
@@ -56,16 +51,12 @@ module.exports = ({ NavAPI, ImageManager }, options) => NavAPI.launch(options.st
     const screenshotAllElements = function screenshotAllElements() {
         return _getNextStory()
                 .then(_takeStoryScreenshot)
-                .then((storyId) => {
-                    if (storyId) {
+                .then((story) => {
+                    if (story) {
                         return screenshotAllElements();
                     }
                     return null;
                 });
     }
-    return screenshotAllElements().then(() => {
-        return ImageManager.compareAll().then(() => {
-            console.log('Done comparing all React Storybook screenshots...');
-        });
-    });
+    return screenshotAllElements();
 });

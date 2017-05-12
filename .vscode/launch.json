@@ -16,8 +16,9 @@
                 "/home/gabrielcazaciuc/storysnap/examples/storybook-scrapper.js",
                 "--storybookUrl",
                 "http://localhost:9009",
-                "--screnshotDir",
-                "../screenshots/"
+                "--test",
+                "--screenshotDir",
+                "./screenshots/"
             ],
             "program": "${workspaceRoot}/bin/storysnap"
         }

@@ -6,17 +6,34 @@ const pkg = require('../package.json');
 const fs = require('fs');
 const NavAPI = require("../src/navigation-api.js");
 const ImageManager = require("../src/image-manager.js");
+const ProgressReporter = require("../src/reporters/progress-reporter.js");
+
+let reporter = null;
 const argv = yargs
-            .usage('Usage: $0 -script [path]')
+            .usage('Usage: $0 --script [path] --screenshotDir [screenshotDir] --test --reporter [reporter]')
             .demandOption(['script'])
             .argv;
 
 if (argv.screenshotDir) {
     ImageManager.setScreenshotDir(argv.screenshotDir);
 }
+
+switch(argv.reporter) {
+    case 'progress':
+    case 'xunit':
+    default:
+        reporter = ProgressReporter;
+}
+
 if (argv.script) {
     const navScript = require(argv.script);
-    navScript({ NavAPI, ImageManager }, argv);
+    navScript({ NavAPI, ImageManager }, argv).then(() => {
+        if(argv.test) {
+            return ImageManager.compareAll().then(() => {
+                reporter.report(ImageManager.getComparisonResults());
+            });
+        }
+    });
 }
 
 function handleExit(err) {
