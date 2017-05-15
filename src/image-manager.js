@@ -7,7 +7,14 @@ const pixelmatch = require('pixelmatch');
 module.exports = {
     _sessionScreenshots: [],
     _comparisonResults: {},
+    _threshold: 0.1,
     _screenshotDir: __dirname,
+     /**
+     * Gets the base directory where screenshots are saved
+     */
+    setThreshold: function setThreshold(threshold) {
+        this._threshold = threshold;
+    },
     /**
      * Gets the base directory where screenshots are saved
      */
@@ -98,7 +105,12 @@ module.exports = {
             path.join(this.getDiffPath(), `${diffScreenshotName}-diff.png`)
         ).then((result) => {
             // The number of pixels changed must be 0
-            this._comparisonResults[firstScreenshot] = (result === 0);
+            this._comparisonResults[firstScreenshot] = {
+                passed: (result === 0),
+                actual: this.getActualPath(firstScreenshot),
+                expected: this.getExpectedPath(firstScreenshot),
+                diff: path.join(this.getDiffPath(), `${diffScreenshotName}-diff.png`)
+            };
             return this.compareAll(screenshots);
         });
     },
@@ -111,7 +123,7 @@ module.exports = {
 
                 const numPixelsDiff = pixelmatch(
                     img1Str.data, img2Str.data, diff.data, img1Str.width, img1Str.height, 
-                    { threshold: 0.1 }
+                    { threshold: this._threshold }
                 );
 
                 diff.pack().pipe(fs.createWriteStream(diffImg)).on('close', () => {

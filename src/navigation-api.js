@@ -4,6 +4,7 @@ const chrome = require('chrome-remote-interface');
 const launcher = require('./chrome-launcher.js');
 const ImageManager = require('./image-manager.js');
 const cropper = require('png-crop');
+const chalk = require('chalk');
 const fs = require('fs');
 const path = require('path');
 
@@ -74,7 +75,7 @@ module.exports = {
             const { nodeId: bodyNodeId } = node;
             return DOM.getBoxModel({ nodeId: bodyNodeId });
         }).catch((err) => {
-            console.log(`Exception while getting bounding box for ${selector}`)
+            console.log(chalk.red(`Exception while getting bounding box for ${selector}`));
             throw err;
         });
     },
@@ -82,7 +83,7 @@ module.exports = {
         const { DOM } = this._client;
         let rootDocPromise = null;
         if (typeof nodeId === 'undefined' || nodeId === null) {
-            rootDocPromise = DOM.getDocument({ depth: -1 });
+            rootDocPromise = DOM.getDocument({ depth: -1, pierce: true });
         } else {
             rootDocPromise = new Promise((resolve) => resolve({root: {nodeId}}));
         }
@@ -102,7 +103,7 @@ module.exports = {
                 nodeId: documentNodeId,
             })
         }).catch((err) => {
-            console.log(`Exception while querying DOM for ${selector}`)
+            console.log(chalk.red(`Exception while querying DOM for ${selector}`));
             throw err;
         });
     },

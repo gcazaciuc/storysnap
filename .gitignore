@@ -4,3 +4,4 @@ expected/
 actual/
 diff/
 *.png
+*.xml

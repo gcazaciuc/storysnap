@@ -18,7 +18,9 @@
                 "http://localhost:9009",
                 "--test",
                 "--screenshotDir",
-                "./screenshots/"
+                "./screenshots/",
+                "--reporters",
+                "xunit"
             ],
             "program": "${workspaceRoot}/bin/storysnap"
         }
