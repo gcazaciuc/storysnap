@@ -14,6 +14,7 @@ const argv = yargs
                     --script [path] 
                     --screenshotDir [screenshotDir] 
                     --test
+                    --delay [delay]
                     --threshold [threshold]
                     --reporters [reporters] 
                     --xunitFile [xunitFile]`)
@@ -40,30 +41,34 @@ const getReporters = function(reportersArg = '') {
 
 if (argv.script) {
     const navScript = require(argv.script);
-    navScript({ NavAPI, ImageManager }, argv).then(() => {
-        if(argv.test) {
-            if (typeof argv.threshold === 'number') {
-                ImageManager.setThreshold(argv.threshold);
-            }
-            return ImageManager.compareAll().then(() => {
-                // Present the results
-                const reporters = getReporters(argv.reporters);
-                const comparisonResults = ImageManager.getComparisonResults();
-                reporters.forEach((reporter) => {
-                    reporter.report(comparisonResults, argv);
-                });
-                // Cleanup and exit
-                const files  =Object.keys(comparisonResults);
-                const numFailedTests = files.filter((f) => !comparisonResults[f]).length;
-                NavAPI.kill();
-                if (numFailedTests) {
-                    process.exit(1);
-                } else {
-                    process.exit(0);
+    console.log('Starting Storysnap....');
+    setTimeout(() => {
+        console.log('Started Storysnap....');
+        navScript({ NavAPI, ImageManager }, argv).then(() => {
+            if(argv.test) {
+                if (typeof argv.threshold === 'number') {
+                    ImageManager.setThreshold(argv.threshold);
                 }
-            });
-        }
-    });
+                return ImageManager.compareAll().then(() => {
+                    // Present the results
+                    const reporters = getReporters(argv.reporters);
+                    const comparisonResults = ImageManager.getComparisonResults();
+                    reporters.forEach((reporter) => {
+                        reporter.report(comparisonResults, argv);
+                    });
+                    // Cleanup and exit
+                    const files  =Object.keys(comparisonResults);
+                    const numFailedTests = files.filter((f) => !comparisonResults[f]).length;
+                    NavAPI.kill();
+                    if (numFailedTests) {
+                        process.exit(1);
+                    } else {
+                        process.exit(0);
+                    }
+                });
+            }
+        });
+    }, argv.delay || 0);
 }
 
 function handleExit(err) {

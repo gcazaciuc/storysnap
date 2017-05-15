@@ -24,11 +24,21 @@ The arguments are as follows:
 3. --screenshotDir - (Optional) Location where the screenshots taken during nav will be saved.
 4. --reporters - (Optional) Comma separated list of reporters when Storysnap is in test mode. Currently only `xunit` and `progress` reporters are provided out of the box. Default to `progress`.
 5. --threshold - (Optional) Numeric threshold when comparing the actual and the baseline images when Storysnap is run in test mode. If the differences are greater than the specified threshold the test is considered failed. Uses [PixelMatch](https://github.com/mapbox/pixelmatch) for doing the comparisons.
+6. --delay - (Optional) Timeout in milliseconds until the navigation starts. This was added in order to allow a certain amount of time for servers to kick off etc before doing a navigation. Default to 0(navigation starts immediately)
+7. --xunitFile - (Optional) If reporter is set to xunit, this represents the XML file path and name where the results would be written.
+
+Any other arguments can be passed and they'll be available in the navigation scripts( eg check out how React Storybook scrapper example gets the --storybookUrl param )
 
 ### NodeJS programatic usage
 
 Check out the 'examples/' folder for a couple of examples:
-* `storybook-scrapper` - Is an example of how you can implement a simple scrapper that connects to React Storybook and does screenshots of all the components it can find. You can run it like so: `./node_modules/.bin/storysnap --script ./node_modules/storysnap/examples/storybook-scrapper.js --test  --storybookUrl http://localhost:9009 --screenshotDir ./screenshots --reporters xunit,progress`. Make sure React storybook is running before trying to take any screenshots!
+* `storybook-scrapper` - Is an example of how you can implement a simple scrapper that connects to React Storybook and does screenshots of all the components it can find. You can run it like so:
+
+```
+./node_modules/.bin/storysnap --script ./node_modules/storysnap/examples/storybook-scrapper.js --test  --storybookUrl http://localhost:9009 --screenshotDir ./screenshots --reporters xunit,progress
+``` 
+Make sure React storybook is running before trying to take any screenshots and that `--storybookUrl` points to the correct URL!
+
 * `programatic-usage` - A barebones programatic usage example that opens up Google, does a screenshot, types a text and then does another screenshot.
 
 All APIs are promise based.
