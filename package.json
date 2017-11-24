@@ -1,6 +1,6 @@
 {
   "name": "storysnap",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A navigation and CSS regression utility based on headless Chrome.",
   "main": "dist/index.js",
   "scripts": {
@@ -11,7 +11,7 @@
   "bin": {
     "storysnap": "./bin/storysnap"
   },
-  "repository": "https://github.com/gcazaciuc/storysnap",    
+  "repository": "https://github.com/gcazaciuc/storysnap",
   "author": "Cazaciuc Gabriel",
   "license": "MIT",
   "dependencies": {
