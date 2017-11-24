@@ -11,6 +11,7 @@
   "bin": {
     "storysnap": "./bin/storysnap"
   },
+  "repository": "https://github.com/gcazaciuc/storysnap",    
   "author": "Cazaciuc Gabriel",
   "license": "MIT",
   "dependencies": {
