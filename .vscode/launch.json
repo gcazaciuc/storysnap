@@ -12,15 +12,8 @@
             "stopOnEntry": true,
             "cwd": "/home/gabrielcazaciuc/storysnap",
             "args": [
-                "--script",
-                "/home/gabrielcazaciuc/storysnap/examples/storybook-scrapper.js",
-                "--storybookUrl",
-                "http://localhost:9009",
-                "--test",
                 "--screenshotDir",
-                "./screenshots/",
-                "--reporters",
-                "xunit"
+                "./screenshots/"
             ],
             "program": "${workspaceRoot}/bin/storysnap"
         }

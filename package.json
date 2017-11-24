@@ -15,14 +15,14 @@
   "license": "MIT",
   "dependencies": {
     "chalk": "^1.1.3",
-    "chrome-remote-interface": "^0.22.0",
-    "lighthouse": "^1.6.5",
-    "pixelmatch": "^4.0.2",
-    "png-crop": "^0.0.1",
-    "pngjs": "^3.2.0",
+    "get-port": "^3.2.0",
+    "log-symbols": "^2.1.0",
+    "mkdirp": "^0.5.1",
+    "node-emoji": "^1.8.1",
+    "progress": "^2.0.0",
+    "puppeteer": "^0.13.0",
     "rimraf": "^2.6.1",
-    "utf-8-validate": "^3.0.1",
-    "xmlbuilder": "^9.0.0",
+    "worker-farm": "^1.5.2",
     "yargs": "^8.0.1"
   },
   "devDependencies": {
