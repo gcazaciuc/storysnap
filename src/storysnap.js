@@ -6,9 +6,11 @@ const storyScraper = require('../src/story-scraper.js');
 const startStorybookServer = require('../src/storybook-server.js');
 const logSymbols = require('log-symbols');
 const logger = require('./logger');
+let storybookServer = null;
 
 module.exports = async (options) => {
     const bin = options.bin || execSync('echo $(npm bin)', { encoding: 'utf-8' }).trim();
+    
     if (options.autostart) {
         options.port = await getPort({ port: options.port });
         const storybookOptions = {
@@ -16,7 +18,7 @@ module.exports = async (options) => {
             configDir: options.configDir,
             cmd: path.resolve(bin, 'start-storybook')
         };
-        await startStorybookServer(storybookOptions);
+        storybookServer = await startStorybookServer(storybookOptions);
     }
     const storybookUrl = `http://${options.host}:${options.port}`;
     await storyScraper.run(Object.assign(
@@ -27,10 +29,18 @@ module.exports = async (options) => {
     );
     logger.info(`${logSymbols.success} Done capturing ${storyScraper.getCapturedScreenshots()} screenshots.`, 'green');
     await storyScraper.terminate();
+    if (storybookServer) {
+        storybookServer.kill();
+        storybookServer = null;
+    }
 };
 
 function handleExit(err) {
     storyScraper.terminate();
+    if (storybookServer) {
+        storybookServer.kill();
+        storybookServer = null;
+    }
     if(err) {
         console.log(err);
     }
